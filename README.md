@@ -1,82 +1,72 @@
-# General Purpose Website Scraper
+# Manga / Manhwa / Manhua Scraper
 
-Scrapes any (server-rendered) webpage for its content like metadata, headings, links, images, tables, structured data, a best guess "main content" extraction for articles/blog posts. You can also pull your own custom fields with CSS selectors, and optionally crawl multiple pages on the same domain.
+Scrapes details for a manga, manhwa or manhua from a URL: title, alternate titles, author(s), artist(s), genres, status, type, description, cover image, rating and the chapter list.
 
 ## Setup
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirement.txt
 ```
 
 ## Usage
 
-Scrape a single page:
-
 ```bash
-python general_scraper.py "https://example.com/some-page"
+python scrapy.py "https://example-manga-site.com/manga/some-title/"
 ```
 
-Save to a file:
+Save the result to a file instead of just printing it:
 
 ```bash
-python general_scraper.py "<url>" -o result.json
+python scrapy.py "https://example-manga-site.com/manga/some-title/" -o result.json
 ```
 
-### Custom fields (works on literally any layout)
-
-Use `--select "name=css_selector"` to pull out specific values as handy for things like prices, ratings, names and anything not covered by the generic fields below. Repeat the flag for multiple fields.
+Limit how many chapters are included (useful for very long series):
 
 ```bash
-python general_scraper.py "https://shop.example.com/product/123" \
-  --select "price=.product-price" \
-  --select "rating=.stars@data-rating" \
-  --select "image=.gallery img@src"
+python scrapy.py "https://example-manga-site.com/manga/some-title/" --max-chapters 20
 ```
 
-- `name=selector` → grabs the element's text
-- `name=selector@attribute` → grabs that attribute instead (e.g. `@href`,
-  `@src`, `@data-price`)
-- If a selector matches multiple elements, you get a list back; if it matches one, you get a single value.
+## What it supports
 
-### Crawling multiple pages
+- **MangaDex** (`mangadex.org/title/...`) — uses MangaDex's official public API, since the website itself is a JavaScript app and has no scrapable HTML.
 
-```bash
-python general_scraper.py "<url>" --crawl --max-pages 20 --delay 1.5
-```
+- **"Madara" theme sites** — a WordPress theme used by a large number of independent manga/manhwa/manhua reader sites. The scraper's selectors target this theme's markup (`.post-content_item`, `.summary-content`, `.wp-manga-chapter`, etc.), so it should work out-of-the-box on many sites without per-site configuration.
 
-This does a breadth first crawl following same domain links found on each page, up to `--max-pages`, waiting `--delay` seconds between requests. It checks `robots.txt` before fetching each page unless you pass `--ignore-robots`.
+- **Anything else** — falls back to Open Graph meta tags (`og:title` ,`og:description`, `og:image`) and schema.org JSON-LD data, so you'll still get a basic title/description/cover even on unsupported layouts.
 
-## What you get back
-
-For each page:
+## Output format
 
 ```json
 {
+  "source": "generic/madara",
   "url": "...",
   "title": "...",
-  "language": "en",
-  "meta_description": "...",
-  "meta_keywords": "...",
-  "canonical_url": "...",
-  "open_graph": { "title": "...", "image": "..." },
-  "twitter_card": { "card": "..." },
-  "json_ld": [ /* raw schema.org blocks, whatever type they are */ ],
-  "headings": [ {"level": 1, "text": "..."} ],
-  "main_content": "best-guess article/body text",
-  "links": [ {"text": "...", "url": "...", "internal": true} ],
-  "images": [ {"src": "...", "alt": "..."} ],
-  "tables": [ /* each table as a list of row objects or row arrays */ ],
-  "custom_fields": { "price": "19.99" }
+  "alternative_titles": "...",
+  "description": "...",
+  "status": "...",
+  "type": "...",
+  "release_year": "...",
+  "genres": ["...", "..."],
+  "authors": "...",
+  "artists": "...",
+  "rating": "...",
+  "cover_image": "https://...",
+  "total_chapters_found": 0,
+  "chapters": [
+    {"title": "Chapter 1", "url": "https://...", "release_date": "..."}
+  ]
 }
 ```
 
-When `--crawl` is used, the output is a list of these objects, one per page visited.
-Missing fields come back as `null` rather than crashing the run.
+Any field the page doesn't have or that the scraper couldn't find, comes back as `null` rather than crashing the whole run.
 
 ## Limitations
 
-- **JavaScript-rendered sites**: this fetches raw HTML, it doesn't run a browser. If a site builds its content client-side and the raw response is mostly empty `<div>`s, this won't see that content.
+- **JavaScript rendered sites**: this uses plain HTTP requests, not a browser, so sites that build the page entirely client side (no content in the raw HTML) won't work. MangaDex is handled specially for this reason.
 
-- **Cloudflare / anti-bot protection**: some sites block plain HTTP clients outright. A 403 here usually means that.
+- **Cloudflare / anti-bot protection** : some sites will block or challenge plain `requests` traffic. If you get a 403 or similar error, that site likely needs more advanced handling like `cloudscraper` or a headless browser like Playwright.
 
-- **`main_content` is a heuristic**, not perfect extraction and it checks a handful of common containers (`article`, `main`, `.post-content`, etc.) and falls back to all `<p>` text. Good for typical blogs/news/docs pages so less reliable on heavily custom layouts.
+## Files
+
+- `scrapy.py` — the scraper itself (CLI tool)
+- `requirement.txt` — Python dependencies
