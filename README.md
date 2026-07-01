@@ -1,6 +1,6 @@
 # Manga / Manhwa / Manhua Scraper
 
-Scrapes details for a manga, manhwa or manhua from a URL: title, alternate titles, author(s), artist(s), genres, status, type, description, cover image, rating and the chapter list.
+Scrapes details for a manga, manhwa or manhua from a URL i.e title, alternate titles, author(s), artist(s), genres, status, type, description, cover image, rating and the chapter list.
 
 ## Setup
 
@@ -66,7 +66,3 @@ Any field the page doesn't have or that the scraper couldn't find, comes back as
 
 - **Cloudflare / anti-bot protection** : some sites will block or challenge plain `requests` traffic. If you get a 403 or similar error, that site likely needs more advanced handling like `cloudscraper` or a headless browser like Playwright.
 
-## Files
-
-- `scrapy.py` — the scraper itself (CLI tool)
-- `requirement.txt` — Python dependencies
